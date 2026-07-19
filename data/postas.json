@@ -1,0 +1,37 @@
+{
+  "type": "circuit",
+  "postas": [
+    {
+      "id": "posta_01",
+      "label": "Cementerio de la Recoleta",
+      "lat": -34.5875,
+      "lon": -58.3931,
+      "radiusMeters": 15,
+      "audioFile": "audio/posta_01.mp3"
+    },
+    {
+      "id": "posta_02",
+      "label": "Centro Cultural Recoleta",
+      "lat": -34.5886,
+      "lon": -58.3927,
+      "radiusMeters": 15,
+      "audioFile": "audio/posta_02.mp3"
+    },
+    {
+      "id": "posta_03",
+      "label": "Plaza Francia",
+      "lat": -34.5870,
+      "lon": -58.3906,
+      "radiusMeters": 15,
+      "audioFile": "audio/posta_03.mp3"
+    },
+    {
+      "id": "posta_04",
+      "label": "Biblioteca Nacional",
+      "lat": -34.5885,
+      "lon": -58.3853,
+      "radiusMeters": 15,
+      "audioFile": "audio/posta_04.mp3"
+    }
+  ]
+}

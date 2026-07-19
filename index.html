@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Postas</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #111; color: #eee; text-align: center; padding: 2rem 1rem; }
+    button { font-size: 1.2rem; padding: 0.8rem 1.5rem; border-radius: 8px; border: none; background: #eee; color: #111; }
+    button:disabled { opacity: 0.5; }
+    #estado { font-size: 1.4rem; margin: 1.5rem 0; }
+    .dato { font-size: 0.9rem; color: #999; margin: 0.2rem 0; }
+  </style>
+</head>
+<body>
+  <h1>Postas</h1>
+  <div id="estado">Tocá "Comenzar" para arrancar</div>
+  <button id="comenzar">Comenzar recorrido</button>
+  <p class="dato">lat: <span id="lat">—</span></p>
+  <p class="dato">lon: <span id="lon">—</span></p>
+  <p class="dato">precisión: <span id="accuracy">—</span></p>
+
+  <script type="module">
+    import { GeolocationSource } from './src/location.js';
+    import { initApp } from './src/ui.js';
+
+    const dom = {
+      botonComenzar: document.getElementById('comenzar'),
+      estado: document.getElementById('estado'),
+      lat: document.getElementById('lat'),
+      lon: document.getElementById('lon'),
+      accuracy: document.getElementById('accuracy'),
+    };
+
+    initApp(new GeolocationSource(), dom);
+  </script>
+</body>
+</html>

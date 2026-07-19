@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Postas — Simulador</title>
+  <style>
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      background: radial-gradient(ellipse at center, #f2e8cf 0%, #ddc99a 100%);
+      color: #4a3520;
+      padding: 1.5rem;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+    h1 { letter-spacing: 0.05em; }
+    button {
+      font-family: inherit;
+      font-size: 1rem;
+      padding: 0.6rem 1rem;
+      border-radius: 6px;
+      border: 1px solid #8b6f47;
+      background: #d8c69a;
+      color: #3b2a15;
+      margin: 0.3rem 0;
+    }
+    button:disabled { opacity: 0.5; }
+    #estado { font-size: 1.2rem; margin: 1rem 0; }
+    .dato { font-size: 0.85rem; color: #6b5636; margin: 0.2rem 0; }
+
+    #carta {
+      display: block;
+      margin: 1rem auto;
+      background: radial-gradient(circle, #f5ecd3 0%, #e3d1a4 80%, #cbb37e 100%);
+      border-radius: 50%;
+      box-shadow: 0 0 25px rgba(75, 53, 32, 0.35) inset, 0 4px 14px rgba(75, 53, 32, 0.3);
+    }
+    #radios line { stroke: #a68a5b; stroke-width: 0.75; opacity: 0.7; }
+    .anillo { fill: none; stroke: #8b6f47; stroke-width: 1; opacity: 0.6; }
+    #trazado { fill: none; stroke: #5c3a21; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; opacity: 0.85; }
+    .postaPunto { fill: #8b3a2a; stroke: #5c2415; stroke-width: 1; cursor: pointer; }
+    .postaEtiqueta { fill: #4a3520; font-size: 11px; text-anchor: middle; pointer-events: none; }
+
+    .controlesCaminata { display: flex; align-items: center; gap: 0.6rem; margin: 0.5rem 0 1.5rem; flex-wrap: wrap; }
+    .controlesCaminata input[type="range"] { flex: 1; }
+
+    details { margin-top: 1.5rem; }
+    summary { cursor: pointer; color: #6b5636; }
+    #postasBackup button { display: block; width: 100%; margin: 0.3rem 0; }
+    fieldset { margin-top: 1rem; border-color: #8b6f47; }
+    input[type="text"] { width: 100%; box-sizing: border-box; padding: 0.4rem; margin: 0.3rem 0; font-family: inherit; }
+  </style>
+</head>
+<body>
+  <h1>Postas — Simulador</h1>
+  <div id="estado">Tocá "Comenzar" para arrancar</div>
+  <button id="comenzar">Comenzar recorrido</button>
+  <p class="dato">lat: <span id="lat">—</span></p>
+  <p class="dato">lon: <span id="lon">—</span></p>
+  <p class="dato">precisión: <span id="accuracy">—</span></p>
+
+  <svg id="carta" viewBox="0 0 500 500" width="100%" style="max-width: 480px;">
+    <circle class="anillo" cx="250" cy="250" r="220" />
+    <circle class="anillo" cx="250" cy="250" r="160" />
+    <circle class="anillo" cx="250" cy="250" r="100" />
+    <g id="radios"></g>
+    <path id="trazado" d="" />
+    <g id="postasCarta"></g>
+    <circle id="puntoUsuario" cx="250" cy="250" r="7" fill="#c9962c" stroke="#5c3a21" stroke-width="1.5" />
+  </svg>
+
+  <div class="controlesCaminata">
+    <button id="toggleCaminata" disabled>Reproducir caminata</button>
+    <label for="velocidad" class="dato">velocidad</label>
+    <input type="range" id="velocidad" min="0.5" max="50" step="0.5" value="40" />
+    <span class="dato" id="velocidadValor">40 m/s</span>
+  </div>
+
+  <details>
+    <summary>Controles manuales (respaldo)</summary>
+    <div id="postasBackup"></div>
+    <fieldset>
+      <legend>Posición manual</legend>
+      <input type="text" id="latManual" placeholder="lat, ej: -34.5875" />
+      <input type="text" id="lonManual" placeholder="lon, ej: -58.3931" />
+      <button id="fijarPosicion">Fijar posición</button>
+    </fieldset>
+  </details>
+
+  <script type="module">
+    import { SimulatedSource } from '../src/location.js';
+    import { initApp } from '../src/ui.js';
+    import { distanciaMetros } from '../src/geofencing.js';
+
+    const NS = 'http://www.w3.org/2000/svg';
+    function crearSVG(tag, attrs) {
+      const el = document.createElementNS(NS, tag);
+      for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+      return el;
+    }
+
+    // Proyecta lat/lon reales dentro del círculo de la carta, conservando
+    // proporciones relativas (misma idea de escala que distanciaMetros: corrige
+    // la longitud por cos(latitud) antes de escalar).
+    function calcularProyeccion(postas, { tamano = 500, margen = 110 } = {}) {
+      const lats = postas.map((p) => p.lat);
+      const lons = postas.map((p) => p.lon);
+      const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+      const minLon = Math.min(...lons), maxLon = Math.max(...lons);
+      const centroLat = (minLat + maxLat) / 2;
+      const centroLon = (minLon + maxLon) / 2;
+      const correccionLon = Math.cos(centroLat * Math.PI / 180);
+      const rangoLat = maxLat - minLat || 0.0005;
+      const rangoLon = (maxLon - minLon) * correccionLon || 0.0005;
+      const escala = (tamano - margen * 2) / Math.max(rangoLat, rangoLon);
+
+      return function proyectar(lat, lon) {
+        return {
+          x: tamano / 2 + (lon - centroLon) * correccionLon * escala,
+          y: tamano / 2 - (lat - centroLat) * escala,
+        };
+      };
+    }
+
+    function segmentosDelCircuito(postas) {
+      return postas.map((desde, i) => {
+        const hasta = postas[(i + 1) % postas.length];
+        return { desde, hasta, longitud: distanciaMetros(desde.lat, desde.lon, hasta.lat, hasta.lon) };
+      });
+    }
+
+    function posicionEnCircuito(segmentos, distancia) {
+      const longitudTotal = segmentos.reduce((s, seg) => s + seg.longitud, 0);
+      let d = distancia % longitudTotal;
+      for (const seg of segmentos) {
+        if (d <= seg.longitud) {
+          const t = seg.longitud === 0 ? 0 : d / seg.longitud;
+          return {
+            lat: seg.desde.lat + (seg.hasta.lat - seg.desde.lat) * t,
+            lon: seg.desde.lon + (seg.hasta.lon - seg.desde.lon) * t,
+          };
+        }
+        d -= seg.longitud;
+      }
+      return { lat: segmentos[0].desde.lat, lon: segmentos[0].desde.lon };
+    }
+
+    const dom = {
+      botonComenzar: document.getElementById('comenzar'),
+      estado: document.getElementById('estado'),
+      lat: document.getElementById('lat'),
+      lon: document.getElementById('lon'),
+      accuracy: document.getElementById('accuracy'),
+    };
+
+    const source = new SimulatedSource();
+    const puntoUsuario = document.getElementById('puntoUsuario');
+    const trazado = document.getElementById('trazado');
+    const toggleCaminata = document.getElementById('toggleCaminata');
+    const velocidadInput = document.getElementById('velocidad');
+    const velocidadValor = document.getElementById('velocidadValor');
+
+    let proyectar = null;
+    let segmentos = null;
+    let distanciaRecorrida = 0;
+    let caminando = false;
+    let trazadoD = '';
+
+    // Mueve el punto dorado y, si trazar=true, extiende la línea del recorrido (L);
+    // si trazar=false (salto manual a una posta), "levanta el lápiz" (M) para no
+    // dibujar una línea recta falsa entre el último punto y el nuevo.
+    function moverPunto(lat, lon, { trazar = true } = {}) {
+      const { x, y } = proyectar(lat, lon);
+      puntoUsuario.setAttribute('cx', x);
+      puntoUsuario.setAttribute('cy', y);
+      const comando = (trazar && trazadoD) ? 'L' : 'M';
+      trazadoD += `${comando}${x.toFixed(1)},${y.toFixed(1)} `;
+      trazado.setAttribute('d', trazadoD);
+    }
+
+    function irAPosta(posta, geofencing) {
+      caminando = false;
+      toggleCaminata.textContent = 'Reproducir caminata';
+      geofencing.resetPosta(posta.id);
+      for (let i = 0; i < geofencing.lecturasParaConfirmar; i++) {
+        source.setPosition(posta.lat, posta.lon, 5);
+      }
+      moverPunto(posta.lat, posta.lon, { trazar: false });
+    }
+
+    initApp(source, dom).then(({ postas, geofencing }) => {
+      const radios = document.getElementById('radios');
+      for (let i = 0; i < 12; i++) {
+        const angulo = (i * 30) * Math.PI / 180;
+        radios.appendChild(crearSVG('line', {
+          x1: 250, y1: 250,
+          x2: 250 + Math.cos(angulo) * 220,
+          y2: 250 + Math.sin(angulo) * 220,
+        }));
+      }
+
+      proyectar = calcularProyeccion(postas);
+      segmentos = segmentosDelCircuito(postas);
+
+      const grupoPostas = document.getElementById('postasCarta');
+      for (const posta of postas) {
+        const { x, y } = proyectar(posta.lat, posta.lon);
+        const punto = crearSVG('circle', { cx: x, cy: y, r: 8, class: 'postaPunto' });
+        punto.addEventListener('click', () => irAPosta(posta, geofencing));
+        grupoPostas.appendChild(punto);
+
+        const etiqueta = crearSVG('text', { x, y: y - 12, class: 'postaEtiqueta' });
+        etiqueta.textContent = posta.label || posta.id;
+        grupoPostas.appendChild(etiqueta);
+      }
+
+      const contenedorBackup = document.getElementById('postasBackup');
+      for (const posta of postas) {
+        const boton = document.createElement('button');
+        boton.textContent = posta.label || posta.id;
+        boton.addEventListener('click', () => irAPosta(posta, geofencing));
+        contenedorBackup.appendChild(boton);
+      }
+
+      document.getElementById('fijarPosicion').addEventListener('click', () => {
+        const lat = parseFloat(document.getElementById('latManual').value);
+        const lon = parseFloat(document.getElementById('lonManual').value);
+        if (Number.isNaN(lat) || Number.isNaN(lon)) {
+          alert('Ingresá lat/lon válidos');
+          return;
+        }
+        caminando = false;
+        toggleCaminata.textContent = 'Reproducir caminata';
+        source.setPosition(lat, lon, 5);
+        moverPunto(lat, lon, { trazar: false });
+      });
+
+      dom.botonComenzar.addEventListener('click', () => {
+        toggleCaminata.disabled = false;
+      });
+
+      toggleCaminata.addEventListener('click', () => {
+        caminando = !caminando;
+        toggleCaminata.textContent = caminando ? 'Pausar caminata' : 'Reproducir caminata';
+      });
+
+      const TICK_MS = 200;
+      setInterval(() => {
+        if (!caminando) return;
+        const velocidad = parseFloat(velocidadInput.value);
+        distanciaRecorrida += velocidad * (TICK_MS / 1000);
+        const { lat, lon } = posicionEnCircuito(segmentos, distanciaRecorrida);
+        source.setPosition(lat, lon, 5);
+        moverPunto(lat, lon, { trazar: true });
+      }, TICK_MS);
+    });
+
+    velocidadInput.addEventListener('input', () => {
+      velocidadValor.textContent = `${parseFloat(velocidadInput.value).toFixed(1)} m/s`;
+    });
+  </script>
+</body>
+</html>
