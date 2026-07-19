@@ -1,7 +1,12 @@
 // Reproducción simple por posta — sin capas, sin crossfade, sin mutación (eso es Fase 2).
 export class AudioEngine {
-  constructor(postas) {
+  constructor(postas, ambientUrl = null) {
     this.audiosPorPosta = new Map(postas.map((p) => [p.id, new Audio(p.audioFile)]));
+    this.ambiente = ambientUrl ? new Audio(ambientUrl) : null;
+    if (this.ambiente) {
+      this.ambiente.loop = true;
+      this.ambiente.volume = 0.2; // volumen fijo del audio de fondo — ajustar este número a mano si hace falta
+    }
     this.desbloqueado = false;
   }
 
@@ -12,6 +17,9 @@ export class AudioEngine {
     for (const audio of this.audiosPorPosta.values()) {
       audio.play().then(() => audio.pause()).catch(() => {});
       audio.currentTime = 0;
+    }
+    if (this.ambiente) {
+      this.ambiente.play().catch((err) => console.warn('No se pudo reproducir el audio de fondo:', err));
     }
     this.desbloqueado = true;
   }

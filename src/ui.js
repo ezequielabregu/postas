@@ -14,8 +14,11 @@ export async function initApp(locationSource, dom) {
     audioFile: new URL(p.audioFile, baseUrl).href,
   }));
 
+  const ambientUrl = new URL('audio/ambient_1_mono.mp3', baseUrl).href;
+
   const geofencing = new Geofencing(postas);
-  const audioEngine = new AudioEngine(postas);
+  const audioEngine = new AudioEngine(postas, ambientUrl);
+
 
   dom.botonComenzar.addEventListener('click', () => {
     audioEngine.desbloquear();
