@@ -3,35 +3,59 @@
   "postas": [
     {
       "id": "posta_01",
-      "label": "Cementerio de la Recoleta",
-      "lat": -34.5875,
-      "lon": -58.3931,
+      "label": "Xul Solar Museum",
+      "lat": -34.5947425,
+      "lon": -58.407934,
       "radiusMeters": 15,
       "audioFile": "audio/posta_01.mp3"
     },
     {
       "id": "posta_02",
-      "label": "Centro Cultural Recoleta",
-      "lat": -34.5886,
-      "lon": -58.3927,
+      "label": "Casa Museo Ricardo Rojas",
+      "lat": -34.593913,
+      "lon": -58.4064474,
       "radiusMeters": 15,
       "audioFile": "audio/posta_02.mp3"
     },
     {
       "id": "posta_03",
-      "label": "Plaza Francia",
-      "lat": -34.5870,
-      "lon": -58.3906,
+      "label": "Jorge Luis Borges International Foundation",
+      "lat": -34.5912469,
+      "lon": -58.4028827,
       "radiusMeters": 15,
       "audioFile": "audio/posta_03.mp3"
     },
     {
       "id": "posta_04",
-      "label": "Biblioteca Nacional",
-      "lat": -34.5885,
-      "lon": -58.3853,
+      "label": "Casa Virasoro",
+      "lat": -34.5882371,
+      "lon": -58.4026522,
       "radiusMeters": 15,
       "audioFile": "audio/posta_04.mp3"
+    },
+    {
+      "id": "posta_05",
+      "label": "Pje Bollini 2233",
+      "lat": -34.5865983,
+      "lon": -58.4033215,
+      "radiusMeters": 15,
+      "audioFile": "audio/posta_05.mp3"
+    },
+    {
+      "id": "posta_06",
+      "label": "Museo del Libro y de la Lengua",
+      "lat": -34.5851696,
+      "lon": -58.3995014,
+      "radiusMeters": 15,
+      "audioFile": "audio/posta_06.mp3"
+    },
+    {
+      "id": "posta_07",
+      "label": "Biblioteca Nacional Mariano Moreno",
+      "lat": -34.5844482,
+      "lon": -58.3980291,
+      "radiusMeters": 15,
+      "audioFile": "audio/posta_07.mp3"
     }
   ]
 }
