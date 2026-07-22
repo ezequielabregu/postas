@@ -3,7 +3,7 @@
   "postas": [
     {
       "id": "posta_01",
-      "label": "Xul Solar Museum",
+      "label": "Museo Xul Solar",
       "lat": -34.5947425,
       "lon": -58.407934,
       "radiusMeters": 15,
@@ -11,7 +11,7 @@
     },
     {
       "id": "posta_02",
-      "label": "Casa Museo Ricardo Rojas",
+      "label": "Casa Ricardo Rojas",
       "lat": -34.593913,
       "lon": -58.4064474,
       "radiusMeters": 15,
@@ -19,7 +19,7 @@
     },
     {
       "id": "posta_03",
-      "label": "Jorge Luis Borges International Foundation",
+      "label": "Fundación Borges",
       "lat": -34.5912469,
       "lon": -58.4028827,
       "radiusMeters": 15,
@@ -51,7 +51,7 @@
     },
     {
       "id": "posta_07",
-      "label": "Biblioteca Nacional Mariano Moreno",
+      "label": "Biblioteca Nacional",
       "lat": -34.5844482,
       "lon": -58.3980291,
       "radiusMeters": 15,
