@@ -81,6 +81,9 @@ function distanciaMetros(lat1, lon1, lat2, lon2) {
 
 Ruta de evolución (Fase 2, no construir ahora): este esquema crece a algo con `nodes`/`edges` separados, geometría real de calle por arista, `isAleph`, `astroAnchor`, `duplicatedFor`/`variantAudioTrackId` para el cartero chino — todo lo que se había diseñado en versiones anteriores de este documento sigue siendo el destino, sólo que se construye cuando el MVP puntual ya esté probado y funcionando, no antes.
 
+**Estado actual**: el recorrido de juguete fue reemplazado por el primer recorrido curado real, en Recoleta — 7 postas con coordenadas reales en `data/postas.json` (Museo Xul Solar, Casa Museo Ricardo Rojas, Fundación Internacional Jorge Luis Borges, Casa Virasoro, Pje Bollini 2233, Museo del Libro y de la Lengua, Biblioteca Nacional Mariano Moreno). El esquema (`id`, `lat`, `lon`, `radiusMeters`, `audioFile`, más un `label` legible agregado para mostrar en el simulador) no cambió respecto al ejemplo de arriba.
+
+
 ## 6. Arquitectura de módulos
 
 ### 6.1 `location.js`
@@ -96,13 +99,19 @@ Ruta de evolución (Fase 2, no construir ahora): este esquema crece a algo con `
 ### 6.3 `audio-engine.js`
 - `reproducirPosta(postaId)`: crea (o reutiliza) un `new Audio(postas[postaId].audioFile)` y lo reproduce.
 - Debe inicializarse tras un gesto explícito del usuario (botón "Comenzar recorrido") — los navegadores móviles bloquean autoplay de audio sin interacción previa. No negociable.
-- Sin capas, sin crossfade, sin mutación — un trigger, un audio. Eso es Fase 2.
+- Sin capas, sin crossfade, sin mutación entre postas — un trigger, un audio. Eso sigue siendo Fase 2.
+- **Excepción agregada**: una pista de ambiente en loop (`ambient_1.mp3`) arranca con el mismo gesto de "Comenzar recorrido" y suena de fondo todo el recorrido, por debajo de los audios de posta — es la única forma de capas que existe hoy, y es deliberadamente simple: volumen fijo hardcodeado en el constructor de `AudioEngine` (sin control de UI, decisión explícita), sin mezcla dinámica ni ducking.
 
-### 6.4 `debug/simulator.html` — simulador mínimo
-Necesario porque Ezequiel no puede salir a caminar Buenos Aires ahora mismo. Versión mínima, sin mapa ni librerías:
-- Un botón por posta de `postas.json`, cada uno con las coordenadas de esa posta hardcodeadas — al tocarlo, llama al callback de `SimulatedSource` con esas coordenadas, como si el GPS hubiera reportado eso.
-- Dos campos de texto (lat, lon) + botón "fijar posición" para probar puntos arbitrarios sin editar código.
-- Nada de mapa, nada de reproducción automática interpolada, nada de ruido sintético — eso es una mejora de Fase 2 (§10) si hace falta más adelante, no un requisito para arrancar.
+### 6.4 `debug/simulator.html` — simulador de escritorio
+
+Empezó como simulador mínimo (botones + campos manuales) y creció bastante más allá de lo que describía esta sección originalmente, porque resultó ser la única forma de probar el geofencing y el mix de audio sin salir a caminar. **Todo lo de acá vive únicamente en este archivo de debug — `index.html`, la pantalla real del caminante, sigue minimalista y no tiene nada de esto.**
+
+- **Carta astral como visualización**: un SVG circular tipo rueda zodiacal (anillos concéntricos, 12 líneas radiales), con la carta astrológica real que Xul Solar le dibujó a Borges (`assets/carta_borges.png`) superpuesta como fondo semi-transparente, recortada a un círculo. Las 7 postas se proyectan dentro de ese círculo según sus coordenadas reales, con una proyección equirectangular local (misma corrección `cos(latitud)` que `distanciaMetros`) que preserva las distancias relativas reales — se ven espaciadas "como en un mapa", no en posiciones arbitrarias.
+- **Caminata automática simulada**: un punto interpola en línea recta entre las postas del circuito a una velocidad ajustable (slider, 0.5–50 m/s), alimentando `SimulatedSource` con lat/lon real de cada paso — dispara el geofencing y el audio exactamente igual que GPS real en movimiento. Deja una línea trazada (SVG `<path>`) mostrando el recorrido acumulado; los saltos manuales (ver abajo) rompen la línea en vez de conectarla.
+- **Orden de visita aleatorio**: cada vez que se carga la página, el orden en que la caminata automática visita las 7 postas se mezcla (Fisher-Yates) — no es el mismo circuito siempre. Esto es un placeholder simple para cuando el recorrido sea sobre un grafo real con más de un circuito válido (teorema BEST, Fase 3, §9).
+- **Controles manuales (respaldo)**, colapsados en un `<details>`: un botón por posta (salta directo a esa posta y fuerza el disparo del audio, vía `Geofencing.resetPosta()`) + campos de lat/lon libres — para probar puntos puntuales sin depender de la caminata automática.
+- Esto adelanta, como herramienta de desarrollo, dos ítems que estaban pensados para más adelante: la reproducción automática interpolada con mapa (Fase 2, §10) y la visualización tipo carta astral (Fase 3, §9/§10) — ver nota en §9 y §10.
+
 
 ## 7. Restricciones técnicas críticas — no ignorar
 
@@ -120,6 +129,8 @@ postas/
 ├── data/
 │   └── postas.json
 ├── audio/
+├── assets/
+│   └── carta_borges.png
 ├── debug/
 │   └── simulator.html
 ├── index.html
@@ -145,47 +156,48 @@ Carpetas que existían en versiones anteriores de este documento (`scripts/`, `t
 | Calles de sentido único | No implementado | Grafo dirigido, geofencing direccional |
 | Acumulación Funes | No implementado | Capas de audio que no se cortan (Web Audio API) |
 | Capa astrológica | No implementado | `astro-config.json`, aspectos como "cables" audibles |
-| Carta astral del recorrido | No implementado | Visualización D3.js del historial de postas visitadas |
+| Carta astral del recorrido | Implementado como herramienta de debug (SVG, `debug/simulator.html`) — no en `index.html` | Pasar la visualización a la pantalla real (si se decide mostrarla al caminante) y/o migrar a D3.js si hace falta más interactividad |
+
 
 ## 10. Roadmap
 
 **Fase 1 — MVP mínimo, paso a paso**
 
-Cada paso probado y andando antes de pasar al siguiente.
+Estado actual: pasos 0–6 completos y probados vía simulador. Falta el paso 7 (prueba de campo real caminando afuera) — sigue pendiente, es lo próximo antes de dar la Fase 1 por cerrada.
 
-0. **Andamiaje mínimo**: `index.html` + `src/` vacío, servido local con `python -m http.server`, deployado a GitHub Pages desde el primer commit. Prueba: abrir la URL en el celular.
-1. **Coordenadas reales**: `navigator.geolocation.watchPosition` mostrando lat/lon y precisión en pantalla. Prueba: en el celular, sin caminar.
-2. **`LocationSource` + simulador mínimo (§6.1, §6.4)**: fuente real + simulada, botones con coordenadas hardcodeadas. Todo lo que sigue se prueba así.
-3. **`postas.json` de juguete + geofencing**: 2-4 postas escritas a mano (cualquier lugar, no hace falta que sea el recorrido final) + `distanciaMetros()` + debounce.
-4. **Reproducción de audio**: `<audio>` nativo disparado por el geofencing — 4 audios de prueba.
-5. **UX de arranque**: gesto explícito, pantalla de permisos, estado en vivo (buscando señal / reproduciendo / posta alcanzada).
-6. **Ajuste de radio y debounce**: usando el simulador para acercarse/alejarse de cada posta de prueba.
-7. **Primera prueba de campo real**: salir a la calle (cualquier calle, no hace falta que sea Buenos Aires ni el recorrido final) para confirmar que anda con GPS real.
-8. **PWA** (`manifest.json` + `service-worker.js`, cache de audio offline) — **primer punto a cortar si falta tiempo**, no bloquea nada de lo anterior.
+0. ✅ **Andamiaje mínimo**: hecho, y además ya deployado a GitHub Pages (`https://ezequielabregu.github.io/postas/`) — el paso de deploy que originalmente quedaba para el final ya está en producción.
+1. ✅ **Coordenadas reales**: `navigator.geolocation.watchPosition` mostrando lat/lon y precisión en pantalla, confirmado funcionando (probado también un falso negativo en el subte, sin señal — esperable, no es un bug).
+2. ✅ **`LocationSource` + simulador**: hecho, y el simulador terminó creciendo mucho más allá de "mínimo" (ver §6.4).
+3. ✅ **`postas.json` + geofencing**: ya no son postas de juguete — son las 7 postas reales curadas en Recoleta (ver §5, §11).
+4. ✅ **Reproducción de audio**: hecho, con el agregado no planeado de una pista de ambiente en loop (§6.3).
+5. ✅ **UX de arranque**: gesto explícito, estado en vivo, funcionando.
+6. ✅ **Ajuste de radio y debounce**: hecho usando el simulador (que ahora además simula caminata automática, no sólo botones puntuales).
+7. ⏳ **Primera prueba de campo real**: **pendiente** — todavía no se confirmó una caminata afuera con señal real (sólo un intento fallido en el subte). Es el próximo paso antes de considerar cerrada la Fase 1.
+8. **PWA** (`manifest.json` + `service-worker.js`, cache de audio offline) — sigue siendo el primer punto a cortar si falta tiempo, no bloquea nada de lo anterior. No empezado.
 
-Con estos pasos hay una app que funciona de punta a punta y se puede mostrar/probar. Recién después, si sobra tiempo o en una segunda etapa, sigue la Fase 2.
+Nota: dos ítems que estaban pensados como mejoras de Fase 2/Fase 3 ya se adelantaron *dentro del simulador de debug* (reproducción automática interpolada, visualización tipo carta astral — ver §6.4, §9) porque resultaron necesarios para poder probar sin salir a caminar. Esto no cambia la prioridad del paso 7 real ni adelanta esas features a `index.html`.
 
-**Fase 2 — profundización (no antes de tener la Fase 1 caminada en la calle al menos una vez)**
+**Fase 2 — profundización (no antes de tener el paso 7 hecho)**
 - Geofencing de arista real: Turf.js + buffers de polígono sobre geometría de calle verdadera.
 - Pipeline `callejero.csv` → grafo real: Python + Geopandas + NetworkX (`eulerize()` para cartero chino).
 - Herramienta de curaduría de ruta: script `.py` + Folium para elegir postas/aristas reales sobre un mapa.
 - Web Audio API: capas tipo Funes, mutación tipo Menard, colapso en nodos Aleph.
 - Direccionalidad en calles de sentido único (grafo dirigido).
-- Capa astrológica (`astro-config.json`, aspectos como audio).
-- Simulador con mapa (Leaflet), reproducción automática interpolada, ruido sintético.
+- Capa astrológica real (`astro-config.json`, aspectos como audio) — distinto de la imagen de fondo ya usada en el simulador, que es sólo estética (ver §11).
 - Backend (Flask) si hace falta guardar recorridos o sincronizar caminantes — ver §12, todavía sin resolver si hace falta.
 
 **Fase 3 — refinamiento**
 - Panning binaural (`PannerNode` HRTF + orientación del dispositivo).
 - Grafo dual ("capa Xul").
-- Conteo de circuitos alternativos (teorema BEST).
-- Visualización del recorrido como carta astral (D3.js, layout radial/polar).
+- Conteo de circuitos alternativos (teorema BEST) — hoy el simulador sólo mezcla el orden al azar (§6.4), no calcula circuitos válidos.
+- Llevar la visualización tipo carta astral a la pantalla real, si se decide mostrarla al caminante (hoy sólo existe en el simulador de debug).
 - Evaluación de Capacitor si el testing de campo muestra problemas de background tracking.
 
 ## 11. Decisiones abiertas — preguntar antes de asumir
 
 - **[ABIERTO] Carta astrológica**: ¿esqueleto verificable (posiciones planetarias reales por fecha) + capa apócrifa explícita encima, o carta completamente inventada a la manera Xul? No afecta la arquitectura de datos, sólo el contenido — es Fase 2, no urgente.
-- **[ABIERTO] Alcance geográfico real del primer recorrido curado**: qué barrio/tramo de la ciudad — relevante quiera cuando se pase a Fase 2 y al pipeline de `callejero.csv`.
+- - **Alcance geográfico real del primer recorrido curado — RESUELTO**: Recoleta. 7 postas: Museo Xul Solar, Casa Museo Ricardo Rojas, Fundación Internacional Jorge Luis Borges, Casa Virasoro, Pje Bollini 2233, Museo del Libro y de la Lengua, Biblioteca Nacional Mariano Moreno. Coordenadas reales en `data/postas.json`. Sigue pendiente el pipeline de `callejero.csv` para cuando se pase a geometría de calle real (Fase 2) — eso no cambió.
+
 - **[ABIERTO] PWA pura vs. Capacitor**: evaluar según resultado de pruebas de campo (§7.1).
 - **[ABIERTO] Recorridos independientes vs. colectivos/sincronizados** para los 30+ usuarios simultáneos — determina si hace falta backend con WebSockets. Ver §12. Nota: la opción "independientes" es también la más simple (cero backend), consistente con la prioridad actual de simplicidad.
 

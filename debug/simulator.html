@@ -7,12 +7,13 @@
   <style>
     body {
       font-family: 'Roboto', sans-serif;
-      background: radial-gradient(ellipse at center, #f2e8cf 0%, #ddc99a 100%);
+      background: #ffffff;
       color: #4a3520;
       padding: 1.5rem;
-      max-width: 700x;
+      max-width: 700px;
       margin: 0 auto;
     }
+
     h1 { letter-spacing: 0.05em; }
     button {
       font-family: inherit;
@@ -28,17 +29,24 @@
     #estado { font-size: 1.2rem; margin: 1rem 0; }
     .dato { font-size: 0.85rem; color: #6b5636; margin: 0.2rem 0; }
 
-    #carta {
+/*     #carta {
       display: block;
       margin: 1rem auto;
       background: radial-gradient(circle, #f5ecd3 0%, #e3d1a4 80%, #cbb37e 100%);
       border-radius: 50%;
       box-shadow: 0 0 25px rgba(75, 53, 32, 0.35) inset, 0 4px 14px rgba(75, 53, 32, 0.3);
+    } */
+    #carta {
+      display: block;
+      margin: 1rem auto;
+      background: #ffffff;
+      border-radius: 50%;
     }
+     
     #radios line { stroke: #a68a5b; stroke-width: 0.75; opacity: 0.5; }
     .anillo { fill: none; stroke: #8b6f47; stroke-width: 1; opacity: 0.5; }
     #trazado { fill: none; stroke: #5c3a21; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; opacity: 0.85; }
-    .postaPunto { fill: #8b3a2a; stroke: #5c2415; stroke-width: 1; cursor: pointer; }
+    .postaPunto { stroke: #5c2415; stroke-width: 1; cursor: pointer; }
     .postaEtiqueta { fill: #4a3520; font-size: 11px; text-anchor: middle; pointer-events: none; }
 
     .controlesCaminata { display: flex; align-items: center; gap: 0.6rem; margin: 0.5rem 0 1.5rem; flex-wrap: wrap; }
@@ -53,7 +61,7 @@
 </head>
 <body>
   <h3>XUL SOLAR - BORGES</h3>
-  <div id="estado">Tocá "Comenzar"</div>
+  <div id="estado"></div>
   <button id="comenzar">Comenzar recorrido</button>
   <p class="dato">lat: <span id="lat">— </span>  lon: <span id="lon">—</span></p>
   <!-- <p class="dato">lon: <span id="lon">—</span></p> -->
@@ -223,17 +231,29 @@
       segmentos = segmentosDelCircuito(ordenRecorrido);
       console.log('Orden del recorrido:', ordenRecorrido.map((p) => p.label || p.id));
 
+      // Colores del piano hexatónico de Xul Solar, uno por posta (cíclico si hay más de 6).
+      const coloresPostas = [
+        '#D8352C', // rojo
+        '#E8862A', // naranja
+        '#E8C93B', // amarillo
+        '#4C9A4A', // verde
+        '#3B72B0', // azul
+        '#6B4A8A', // violeta
+      ];
+
       const grupoPostas = document.getElementById('postasCarta');
-      for (const posta of postas) {
+      postas.forEach((posta, i) => {
         const { x, y } = proyectar(posta.lat, posta.lon);
-        const punto = crearSVG('circle', { cx: x, cy: y, r: 8, class: 'postaPunto' });
+        const color = coloresPostas[i % coloresPostas.length];
+        const punto = crearSVG('circle', { cx: x, cy: y, r: 8, class: 'postaPunto', fill: color });
         punto.addEventListener('click', () => irAPosta(posta, geofencing));
         grupoPostas.appendChild(punto);
 
         const etiqueta = crearSVG('text', { x, y: y - 12, class: 'postaEtiqueta' });
         etiqueta.textContent = posta.label || posta.id;
         grupoPostas.appendChild(etiqueta);
-      }
+      });
+
 
       const contenedorBackup = document.getElementById('postasBackup');
       for (const posta of postas) {
